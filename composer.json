@@ -1,0 +1,65 @@
+{
+  "name": "lizhichao/one-app",
+  "type": "library",
+  "description": "One Framework",
+  "keywords": [
+    "swoole",
+    "framework",
+    "async",
+    "one"
+  ],
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "tanszhe",
+      "email": "1018595261@qq.com"
+    }
+  ],
+  "scripts-": {
+    "post-install-cmd": [
+      "find vendor -type d -name .git -exec rm -rf '{}' \\;"
+    ],
+    "post-update-cmd": [
+      "find vendor -type d -name .git -exec rm -rf '{}' \\;"
+    ]
+  },
+  "require": {
+    "php": ">=7.1.0",
+    "vlucas/phpdotenv": "^3.4",
+    "respect/validation": "^1.1",
+    "monolog/monolog": "^1.25",
+    "overtrue/pinyin": "^4.0",
+    "overtrue/easy-sms": "^1.1",
+    "fzaninotto/faker": "^1.8",
+    "yurunsoft/phpmailer-swoole": "^1.0",
+    "overtrue/wechat": "^4.2",
+    "yansongda/pay": "^2.8",
+    "ext-json": "*",
+    "aliyuncs/oss-sdk-php": "^2.3",
+    "symfony/dom-crawler": "^5.1",
+    "symfony/css-selector": "^5.1",
+    "hinabian/one_fpm_rpc_client_sdk": "dev-master",
+    "hinabian/swoole_one": "dev-master"
+  },
+  "config": {
+    "preferred-install": {
+      "*": "dist"
+    },
+    "secure-http": false
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "http://172.16.10.99:9900/Develop_GROUP/one_fpm_rpc_client_sdk.git"
+    },
+    {
+      "type": "vcs",
+      "url": "http://172.16.10.99:9900/Develop_GROUP/swoole_one.git"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "App\\": "App/"
+    }
+  }
+}

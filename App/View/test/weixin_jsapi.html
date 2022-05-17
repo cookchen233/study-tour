@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>微信jsapi测试</title>
+  <style>
+    body{
+      font-size: 2em;
+    }
+  </style>
+</head>
+<body>
+<div style="text-align: center">
+  <button style="font-size: 2em;border: #cccccc solid 1px" onclick="pay()">支付</button>
+  <button style="font-size: 2em;border: #cccccc solid 1px" onclick="getUserInfo()">获取用户信息</button>
+</div>
+<script>
+  function getQuery(variable) {
+    var query = window.location.search.substring(1);
+    var vars = query.split("&");
+    for (var i=0;i<vars.length;i++) {
+      var pair = vars[i].split("=");
+      if(pair[0] == variable){return pair[1];}
+    }
+    return false;
+  }
+
+  function pay(){
+    //请求获得支付相关参数
+    var xhr, formData;
+    formData = new FormData();
+    formData.append('biz_code', '1v1');
+    formData.append('order_uuid', getQuery('order_uuid'));
+    xhr = new XMLHttpRequest();
+    xhr.withCredentials = false;
+    xhr.open('POST', '/insurance-service/service-card/wechat-pay/index');
+    xhr.onload = function () {
+      var json;
+      if (xhr.responseText) {
+        json = JSON.parse(xhr.responseText);
+      }
+      if (xhr.status != 200) {
+        if (json) {
+          var msg = json.msg;
+          if (json.ref) {
+            msg += ', ' + json.ref
+          }
+          console.error(msg);
+          alert(msg);
+        } else {
+          console.error('HTTP Error: ' + xhr.status);
+          alert('HTTP Error: ' + xhr.status);
+        }
+        return;
+      }
+      if (!json) {
+        console.error('Invalid JSON: ' + xhr.responseText);
+        alert('Invalid JSON: ' + xhr.responseText);
+        return;
+      }
+      if (json.code != 'ok') {
+        console.error(json.msg);
+        alert(json.msg);
+        return;
+      }
+      var info = json.data.info;
+      //发起支付api
+      WeixinJSBridge.invoke('getBrandWCPayRequest', {
+        appId: info.appId,
+        timeStamp: info.timeStamp,
+        nonceStr: info.nonceStr,
+        package: info.package,
+        signType: info.signType,
+        paySign: info.paySign
+      }, function(res){
+        if(res.err_msg == "get_brand_wcpay_request:ok" ){
+          console.log('支付成功')
+          alert('支付成功')
+        }
+      });
+    }
+    xhr.send(formData);
+  }
+
+
+  function getUserInfo(){
+    //请求获得支付相关参数
+    var xhr, formData;
+    formData = new FormData();
+    xhr = new XMLHttpRequest();
+    xhr.withCredentials = false;
+    xhr.open('GET', '/insurance-service/getUserInfo');
+    xhr.onload = function () {
+      alert(xhr.responseText)
+
+    }
+    xhr.send(formData);
+  }
+</script>
+
+</body>
+</html>

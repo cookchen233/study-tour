@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>A Pen by  Wayne</title>
+  <link rel="stylesheet" href="//cache.hinabian.com/admin/element-ui/index.css">
+  <link rel="stylesheet" href="//api.hinabian.com/study-tour/Operate/commonCss">
+</head>
+<body>
+<div id="app">
+  <template>
+    <div class="app-container" style="box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 0 6px rgba(0, 0, 0, .04);padding: 10px">
+      <!--过滤器-->
+      <div class="filter-container" style="">
+        <el-input class="filter-item" v-model="query.keywords" clearable placeholder="关键词" autofocus @keyup--.enter.native="handleFilter" @input="handleFilter"></el-input>
+        <el-select class="filter-item" v-model="query.country" clearable placeholder="国家" @change="handleFilter">
+          <el-option v-for="(item, index) in country" :label="item" :value="item"></el-option>
+        </el-select>
+        <el-select class="filter-item" v-model="query.is_enabled" clearable placeholder="是否上线" @change="handleFilter">
+          <el-option label="上线" value="1"></el-option>
+          <el-option label="未上线" value="0"></el-option>
+        </el-select>
+        <el-button type="primary" @click="resetFilter">重置</el-button>
+        <el-button style="margin-left: 10px;" type="primary" @click="handleCreate">新建</el-button>
+      </div>
+
+      <!--数据列表-->
+      <el-table :data="list" v-loading="loading" :empty-text="empty_list" stripe-- style="width: 100%;margin: 20px 0;border-top: 1px solid #eee;">
+        <el-table-column prop="country" label="国家" width="100"></el-table-column>
+        <el-table-column label="年龄" width="120">
+          <template slot-scope="scope">
+            {{scope.row.age_min}} - {{scope.row.age_max}}
+          </template>
+        </el-table-column>
+        <el-table-column prop="type_text" label="活动类型"></el-table-column>
+        <el-table-column prop="p_title" label="项目" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="is_enabled" label="上线" width="60">
+          <template slot-scope="scope">
+            <el-switch :value="Boolean(scope.row.is_enabled)" active-text="" active-color="#13ce66" @change="handleUpdate($event, {is_enabled: !scope.row.is_enabled, uuid: scope.row.uuid})"></el-switch>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120">
+          <template slot-scope="scope">
+            <el-button size="mini" type="danger--" @click="handleInfo(scope.row, scope.$index)">编辑</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination
+              background
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+              :current-page.sync="query.page"
+              :page-sizes="[7, 20, 50, 100]"
+              :page-size="limit"
+              layout="total, sizes, prev, pager, next"
+              :total="total">
+      </el-pagination>
+
+      <!--编辑对话框-->
+      <el-dialog fullscreen__ :title="editor_title" :visible.sync="is_show_editor" @closed="resetForm('dataForm')">
+        <el-form ref="dataForm" v-loading="loading" :rules="rules" :model="info" label-position="right" label-width="90px">
+          <el-form-item label="国家" prop="country">
+            <el-radio-group v-model="info.country"><el-radio v-for="(item, index) in country" :label="item">{{item}}</el-radio></el-radio-group>
+          </el-form-item>
+          <el-row>
+            <el-col :span="9">
+              <el-form-item label="年龄" prop="age_min"><el-input-number v-model="info.age_min" style="width:160px" controls-position="right" :min="0" :max="170" placeholder="输入一个最小值"></el-input-number></el-form-item>
+            </el-col>
+            <el-col :span="9">
+              <el-form-item label="- " prop="age_max"><el-input-number v-model="info.age_max" style="width:160px" controls-position="right" :min="0" :max="170" placeholder="输入一个最大值"></el-input-number></el-form-item>
+            </el-col>
+          </el-row>
+          <el-form-item label="活动类型" prop="type">
+            <el-select v-model="info.type" multiple style="width:90%">
+              <el-option v-for="item in type" :key="item.value" :label="item.text" :value="item.value"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="游学项目" prop="project_uuid">
+            <el-select style="width: 90%;"
+                       ref="project"
+                       v-model="info.project_uuid"
+                       filterable
+                       remote
+                       reserve-keyword
+                       placeholder="输入关键词可搜索"
+                       :loading="loading"
+                       :remote-method="projectList"
+                       @click.native__="projectList">
+              <el-option
+                      v-for="item in project_list"
+                      :key="item.uuid"
+                      :label="item.title|ellipsis(22)"
+                      :value="item.uuid">
+                <span style="float: left">{{item.title|ellipsis(22)}}</span>
+                <span style="float: right; color: #8492a6; font-size: 13px">{{item.is_enabled|is_enabled_text}}</span>
+              </el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="上线" prop="is_enabled"><el-switch @change="info.is_enabled=!info.is_enabled" :value="Boolean(info.is_enabled)" active-text="" active-color="#13ce66"></el-switch></el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="is_show_editor=false">取消</el-button>
+          <el-button type="primary" @click="handleUpdate" :loading="posting">提交</el-button>
+        </div>
+      </el-dialog>
+    </div>
+  </template>
+</div>
+<script src="//cache.hinabian.com/admin/element-ui/vue.js"></script>
+<script src="//cache.hinabian.com/admin/element-ui/index.js"></script>
+<script src="//cache.hinabian.com/admin/clipboard.min.js"></script>
+<script src="//cache.hinabian.com/admin/axios.min.js"></script>
+<script>
+  var Main = {
+    data() {
+      return {
+        project_list:[],
+        picture:'',
+        country: [],
+        type: [],
+        state: [],
+        rules: {
+          country: [{ required: true, message: '国家是必须的', trigger: 'change' }],
+          age_min: [{ required: true, message: '年龄最小值是必须的', trigger: 'blur' }],
+          age_max: [{ required: true, message: '年龄最大值是必须的', trigger: 'blur' }],
+          type: [{ required: true, message: '活动类型是必须的', trigger: 'blur' }],
+          project_uuid: [{ required: true, message: '游学项目是必须的', trigger: 'change' }]
+        },
+        editor_title: '',
+        is_show_editor:false,
+        limit:7,
+        default_query:{},
+        query:{},
+        total: 0,
+        list: [],
+        loading: false,
+        empty_list:'',
+        default_info:{
+          is_enabled:true
+        },
+        info: {},
+        posting:false
+      }
+    },
+    filters: {
+      is_enabled_text(value, text) {
+        let enabled_text=text?text:'未上线'
+        return value < 1 ? enabled_text : ''
+      },
+      //多余字符省略,用法: {{scope.row.summary | ellipsis(14)}}
+      ellipsis(value, length) {
+        if (!value) return ''
+        if (value.length > length) {
+          return value.slice(0, length) + '...'
+        }
+        return value
+      },
+    },
+    mounted() {
+      this.getList()
+      this.clipboard()
+      this.projectList('', (project_list)=>{
+        this.full_project_list=project_list
+      })
+    },
+    methods: {
+      //项目列表
+      projectList(query, callback){
+        let params = {limit:100}
+        if(query && typeof query == 'string' && query.trim()){
+          params.keywords=query
+        }
+        this.axiosGet('../ProjectAdmin/index?action',{params:params} ).then(response => {
+          if(response.data.code != 'ok'){
+            this.project_list = []
+          }
+          else{
+            let data = response.data.data
+            this.project_list = data.list
+            if(this.project_list.length<1){
+              setTimeout(()=>{
+                this.project_list=this.full_project_list
+              },1000)
+            }
+          }
+          if(callback){
+            callback(this.project_list)
+          }
+        })
+      },
+      //上传图片后
+      handlePictureSuccess(res, file) {
+        if(res.errorCode != 0){
+          return this.$notify.error(res.data)
+        }
+        this.picture = res.data
+        this.info.picture = res.data
+        this.$refs['dataForm'].validateField('picture')
+      },
+      //上传图片前
+      beforePictureUpload(file) {
+        const isJPG = file.type === 'image/jpeg';
+        const isLt2M = file.size / 1024 / 1024 < 2;
+        if (!isJPG) {
+          //this.$notify.error('上传头像图片只能是 JPG 格式!');
+        }
+        if (!isLt2M) {
+          this.$notify.error('上传头像图片大小不能超过 2MB!');
+        }
+        //return isJPG && isLt2M;
+        return isLt2M;
+      },
+      //打开弹窗
+      editOpen(title, callback){
+        this.editor_title = title
+        this.is_show_editor=true
+        this.info = JSON.parse(JSON.stringify(this.default_info))
+        //打开弹窗渲染完成后的回调
+        this.$nextTick(() => {
+          if(callback){
+            callback()
+          }
+        })
+      },
+      //表单重置
+      resetForm(formName){
+        this.$refs[formName].resetFields()
+        this.picture = ''
+      },
+      //空数据验证器(用于上传等非input控件)
+      emptyValidator(rule, value, callback){
+        if (!this.info[rule.field] || !this.info[rule.field].length) {
+          callback(new Error());
+        } else {
+          callback();
+        }
+      },
+      handleCreate(){
+        this.editOpen('新建')
+      },
+      //详情编辑
+      handleInfo(row, index) {
+        this.editOpen('编辑', () => {
+          this.axiosGet('update?action=info', {params : {uuid:row.uuid}} ).then(response => {
+            let data = response.data.data
+            console.warn('handleInfo response data', data)
+            let info = data.info
+            info.start_time = info.start_time_fmt
+            info.end_time = info.end_time_fmt
+            info.finish_time = info.finish_time_fmt
+            this.info = info
+            this.picture = info.picture
+          })
+        })
+      },
+      //更新
+      handleUpdate(e, data) {
+        const update = (data) => {
+          this.axiosPost((data.uuid ? 'update' : 'create') + '?action', data).then( (response) => {
+            this.is_show_editor=false
+            this.getList()
+          })
+        }
+        if(data){
+          update(data)
+        }
+        else{
+          this.$refs['dataForm'].validate((valid) => {
+            if (valid) {
+              update(this.info)
+            }
+          })
+        }
+      },
+      //剪贴板
+      clipboard(){
+        (new ClipboardJS('.copy')).on('success', function(e) {
+          e.clearSelection()
+          let t = e.trigger
+          t.innerText = '已复制'
+          setTimeout(()=>{t.innerText = '复制'},1000)
+        })
+      },
+      //请求列表数据
+      getList() {
+        this.query=Object.assign({},this.default_query, this.query)
+        this.query.limit = this.limit
+        this.axiosGet('?action',{params:this.query} ).then(response => {
+          if(response.data.code != 'ok'){
+            this.empty_list = response.data.msg
+            this.total = 0
+          }
+          else{
+            let data = response.data.data
+            this.list = data.list
+            this.total = data.total
+            this.country = data.country
+            this.type = data.type
+          }
+        })
+      },
+      //提交每页显示数
+      handleSizeChange(limit){
+        this.limit = limit
+        this.getList()
+      },
+      //翻页
+      handleCurrentChange(page){
+        this.query.page = page
+        this.getList()
+      },
+      //提交列表筛选
+      handleFilter(){
+        for (let i in this.query){
+          if((''+this.query[i]).trim() == ''){
+            delete this.query[i]
+          }
+        }
+        this.query.page = 1
+        this.getList()
+      },
+      //重置筛选
+      resetFilter(){
+        this.query = this.default_query
+        this.handleFilter()
+      },
+      axiosRequest(config, handle_error = true) {
+        var vm = this
+        return new Promise((resolve, reject) => {
+          config.method == 'post' ? vm.posting=true : vm.loading=true
+          axios({timeout:20000,...config}).then(function(response){
+            if(response.request.responseURL == 'https://operate.hinabian.com/index/index'){
+              location.href = response.request.responseURL;
+              return;
+            }
+            if(response.data.code != 'ok' && handle_error){
+              vm.$notify.error(response.data.msg)
+              reject(response)
+            }
+            else{
+              config.method == 'post' ? vm.$notify.success('操作成功') : ''
+              resolve(response)
+            }
+          }).catch(function (error) {
+            if(error.response){
+              console.warn('服务端错误',error.response.data.ref)
+              data = error.response.data
+              if(handle_error){
+                if(data.msg){
+                  vm.$notify.error(data.msg)
+                } else{
+                  vm.$notify.error(error.response.statusText)
+                }
+              }
+            } else{
+              console.warn('axios catch error',error)
+              vm.$notify.error(error.message)
+            }
+            reject(error)
+          }).finally(function () {
+            config.method == 'post' ? vm.posting=false : vm.loading=false
+          })
+        })
+      },
+      axiosGet(url, config, handle_error = true){
+        return this.axiosRequest({
+          url:url,
+          method:'get',
+          ...config
+        })
+      },
+      axiosPost(url, data, config, handle_error = true){
+        return this.axiosRequest({
+          url:url,
+          method:'post',
+          data,
+          ...config
+        })
+      }
+    }
+  }
+
+  Vue.prototype.$ELEMENT = { size: "mini" } //小号UI,小号字体
+  var Ctor = Vue.extend(Main)
+  new Ctor().$mount('#app')
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+.idea
+.svn
+.DS_Store
+.env
+/App/RunCache/log/
+/App/RunCache/hilog/
+/App/RunCache/cache/
+/console.log
+/docker-file/sources.list
+*.pem

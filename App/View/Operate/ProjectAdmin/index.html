@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>A Pen by  Wayne</title>
+  <link rel="stylesheet" href="//cache.hinabian.com/admin/element-ui/index.css">
+  <link rel="stylesheet" href="//api.hinabian.com/study-tour/Operate/commonCss">
+</head>
+<body>
+<div id="app">
+  <template>
+    <div class="app-container" style="box-shadow: 0 2px 4px rgba(0, 0, 0, .12), 0 0 6px rgba(0, 0, 0, .04);padding: 10px">
+      <!--过滤器-->
+      <div class="filter-container" style="">
+        <el-input class="filter-item" v-model="query.keywords" clearable placeholder="关键词" autofocus @keyup--.enter.native="handleFilter" @input="handleFilter"></el-input>
+        <el-select class="filter-item" v-model="query.country" clearable placeholder="国家" @change="handleFilter">
+          <el-option v-for="(item, index) in country" :label="item" :value="item"></el-option>
+        </el-select>
+        <el-select class="filter-item" v-model="query.state" clearable placeholder="项目状态" @change="handleFilter">
+          <el-option label="未开始" value="100"></el-option>
+          <el-option label="进行中" value="200"></el-option>
+          <el-option label="已结束" value="300"></el-option>
+        </el-select>
+        <el-select class="filter-item" v-model="query.is_enabled" clearable placeholder="是否上线" @change="handleFilter">
+          <el-option label="上线" value="1"></el-option>
+          <el-option label="未上线" value="0"></el-option>
+        </el-select>
+        <el-button type="primary" @click="resetFilter">重置</el-button>
+        <el-button style="margin-left: 10px;" type="primary" @click="handleCreate">新建</el-button>
+      </div>
+
+      <!--数据列表-->
+      <el-table :data="list" v-loading="loading" :empty-text="empty_list" stripe-- style="width: 100%;margin: 20px 0;border-top: 1px solid #eee;">
+        <el-table-column prop="title" label="名称">
+          <template slot-scope="scope">
+            <el-popover placement="right" trigger="hover" :content="scope.row.title">
+              <span slot="reference">{{scope.row.title | ellipsis(38)}}</span>
+            </el-popover>
+          </template>
+        </el-table-column>
+        <el-table-column prop="picture" label="图片" width="160">
+          <template slot-scope="scope">
+            <el-popover placement="left" trigger="hover">
+              <el-image style="width: 200px; height: 100%" :src="scope.row.picture"></el-image>
+              <el-image slot="reference" style="width: 40px; height: 100%" :src="scope.row.picture"></el-image>
+            </el-popover>
+          </template>
+        </el-table-column>
+        <el-table-column prop="country" label="国家" width="100"></el-table-column>
+        <el-table-column prop="price" label="价格" width="100"></el-table-column>
+        <el-table-column prop="state_text" label="状态" width="100"></el-table-column>
+<!--        <el-table-column prop="ctime_fmt" label="创建时间" width="105" show-overflow-tooltip></el-table-column>-->
+        <el-table-column prop="is_selection" label="精选" width="60">
+          <template slot-scope="scope">
+            <el-switch :value="Boolean(scope.row.is_selection)" active-text="" active-color="#13ce66" @change="handleUpdate($event, {is_selection: !scope.row.is_selection, uuid: scope.row.uuid})"></el-switch>
+          </template>
+        </el-table-column>
+        <el-table-column prop="is_enabled" label="上线" width="60">
+          <template slot-scope="scope">
+            <el-switch :value="Boolean(scope.row.is_enabled)" active-text="" active-color="#13ce66" @change="handleUpdate($event, {is_enabled: !scope.row.is_enabled, uuid: scope.row.uuid})"></el-switch>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160">
+          <template slot-scope="scope">
+            <el-button size="mini" type="danger--" @click="handleInfo(scope.row, scope.$index)">编辑</el-button>
+            <a :href="'https://m.hinabian.com/edu/projectdetail/'+scope.row.uuid" class="el-button el-button--mini" style="text-decoration: none" target="_blank">预览</a>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination
+              background
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+              :current-page.sync="query.page"
+              :page-sizes="[7, 20, 50, 100]"
+              :page-size="limit"
+              layout="total, sizes, prev, pager, next"
+              :total="total">
+      </el-pagination>
+
+      <!--编辑对话框-->
+      <el-dialog :close-on-click-modal="false" fullscreen__ :title="editor_title" :visible.sync="is_show_editor" @closed="resetForm('dataForm')">
+        <el-form ref="dataForm" v-loading="loading" :rules="rules" :model="info" label-position="right" label-width="102px">
+          <el-form-item label="国家" prop="country">
+            <el-radio-group v-model="info.country"><el-radio v-for="(item, index) in country" :label="item">{{item}}</el-radio></el-radio-group>
+          </el-form-item>
+          <el-form-item label="名称" prop="title"><el-input v-model="info.title" placeholder="输入一个名称" style="width: 90%"></el-input></el-form-item>
+          <el-form-item label="精选" prop="is_selection"><el-switch @change="info.is_selection=!info.is_selection" :value="Boolean(info.is_selection)" active-text="" active-color="#13ce66"></el-switch></el-form-item>
+          <el-form-item label="概要" prop="summary"><el-input v-model="info.summary" type="textarea" autosize placeholder="输入一段概要" style="width: 90%"></el-input></el-form-item>
+          <el-row>
+            <el-col :span="12">
+              <el-form-item label="价格" prop="price"><el-input-number v-model="info.price" style="width:150px" controls-position="right" :max="1000000" placeholder="输入一个价格"></el-input-number><span style="margin-left: 6px">元</span></el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="原价" prop="price"><el-input-number v-model="info.ori_price" style="width:150px" controls-position="right" :max="1000000" placeholder="输入一个价格"></el-input-number><span style="margin-left: 6px">元</span></el-form-item>
+
+            </el-col>
+          </el-row>
+          <el-form-item label="活动地点" prop="place"><el-input v-model="info.place" placeholder="输入一个国家及其地区" style="width: 90%"></el-input></el-form-item>
+          <el-form-item label="年龄要求" prop="age_range"><el-input v-model="info.age_range" placeholder="输入一个年龄范围描述" style="width: 90%"></el-input></el-form-item>
+          <el-form-item label="语言要求" prop="lang_desc"><el-input v-model="info.lang_desc" placeholder="输入一个语言要求描述" style="width: 90%"></el-input></el-form-item>
+          <el-form-item label="活动时间" prop="period"><el-input v-model="info.period" placeholder="输入一段时间期限" style="width: 90%"></el-input></el-form-item>
+          <el-form-item label="推荐理由" prop="rec_reason"><el-input v-model="info.rec_reason" type="textarea" autosize placeholder="输入一段推荐理由" style="width: 90%"></el-input></el-form-item>
+          <el-form-item label="陈列图(M站)" prop="picture">
+            <el-upload
+                    class="avatar-uploader"
+                    action="https://operate.hinabian.com/file/image/saveWithOssLimit/size/50000"
+                    :show-file-list="false"
+                    :with-credentials="true"
+                    :on-success="handlePictureSuccess"
+                    :before-upload="beforePictureUpload">
+              <el-popover v-if="picture" placement="top" trigger="hover">
+                <el-image style="width: 200px; height: 100%" :src="picture"></el-image>
+                <img slot="reference" :src="picture" class="avatar">
+              </el-popover>
+              <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+            </el-upload>
+          </el-form-item>
+          <el-form-item label="陈列图(PC)" prop="picture_pc">
+            <el-upload
+                    class="avatar-uploader"
+                    action="https://operate.hinabian.com/file/image/saveWithOssLimit/size/50000"
+                    :show-file-list="false"
+                    :with-credentials="true"
+                    :on-success="handlePicturePCSuccess"
+                    :before-upload="beforePictureUpload">
+              <el-popover v-if="picture_pc" placement="top" trigger="hover">
+                <el-image style="width: 200px; height: 100%" :src="picture_pc"></el-image>
+                <img slot="reference" :src="picture_pc" class="avatar">
+              </el-popover>
+              <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+            </el-upload>
+          </el-form-item>
+          <el-form-item label="详情图(PC)" prop="picture_pc_detail">
+            <el-upload
+                    class="avatar-uploader"
+                    action="https://operate.hinabian.com/file/image/saveWithOssLimit/size/50000"
+                    :show-file-list="false"
+                    :with-credentials="true"
+                    :on-success="handlePicturePCDetailSuccess"
+                    :before-upload="beforePictureUpload">
+              <el-popover v-if="picture_pc_detail" placement="top" trigger="hover">
+                <el-image style="width: 200px; height: 100%" :src="picture_pc_detail"></el-image>
+                <img slot="reference" :src="picture_pc_detail" class="avatar">
+              </el-popover>
+              <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+            </el-upload>
+          </el-form-item>
+          <!--<el-form-item label="轮播图片" prop="picture_list">
+            <el-upload
+                    class="avatar-uploader"
+                    action="https://operate.hinabian.com/file/image/saveWithOssLimit/size/50000"
+                    :with-credentials="true"
+                    :on-success="handlePictureListSuccess"
+                    :before-upload="beforePictureUpload"
+                    list-type="picture-card"
+                    multiple
+                    :file-list="picture_list"
+                    :on-preview="handlePictureListPreview"
+                    :on-remove="handlePictureListRemove">
+              <img slot="reference" :src="picture" class="avatar">
+              <i class="el-icon-plus avatar-uploader-icon"></i>
+            </el-upload>
+            <el-dialog :visible.sync="is_show_img_preview"  append-to-body>
+              <img width="100%" :src="img_preview_src" alt="">
+            </el-dialog>
+          </el-form-item>-->
+          <el-form-item label="详情(M站)" prop="content"><textarea style="width: 90%;height: 100px;" id="rich_text"></textarea></el-form-item>
+          <el-form-item label="详情(PC)" prop="multi_content">
+            <el-row style="margin-bottom: 10px" >
+              <el-col :span="8">
+                  <el-input ref="tab_title" v-model="tab_title" placeholder="输入一个介绍栏名称"  style="width: 100%"></el-input>
+              </el-col>
+              <el-col :span="6">
+                <el-button style="margin-left: 10px;" type="primary" @click="addTab()" :loading="posting">增加介绍栏</el-button>
+              </el-col>
+            </el-row>
+            <el-tabs  v-model="cur_tab_id" type="card" closable @tab-remove="removeTab">
+              <el-tab-pane style="padding-bottom: 10px" v-for="(item, index) in info.multi_content" v-if="item" :key="item.tab_id" :label="item.title" :name="item.tab_id" @dblclick="editTabTitle">
+                <template slot="label"><span @dblclick="editTabTitle(item.tab_id, item.title)">{{item.title}}</span></template>
+                <rich-text ref="multi_rich_text" :info.sync="item.info" ></rich-text>
+              </el-tab-pane>
+              <span class="info">拖拽标签排序, 双击标签编辑名称</span>
+            </el-tabs>
+          </el-form-item>
+          <el-form-item label="状态" prop="state">
+            <el-radio-group v-model="info.state"><el-radio v-for="(item, index) in state" :label="item.value">{{item.text}}</el-radio></el-radio-group>
+          </el-form-item>
+          <el-form-item label="上线" prop="is_enabled"><el-switch @change="info.is_enabled=!info.is_enabled" :value="Boolean(info.is_enabled)" active-text="" active-color="#13ce66"></el-switch></el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="is_show_editor=false">取消</el-button>
+          <el-button type="primary" @click="handleUpdate" :loading="posting">提交</el-button>
+        </div>
+      </el-dialog>
+      <el-dialog append-to-body width="20%" title="编辑介绍栏名称" :visible.sync="is_show_edit_tab_title_dialog">
+        <el-form ref="edit_tab_title_form" :model="edit_tab_title_info" :rules="edit_tab_title_form_rules" @submit.native.prevent>
+          <el-form-item label="" prop="title"><el-input v-model="edit_tab_title_info.title" @input="$forceUpdate()" placeholder="输入一个名称" autofocus @keyup.enter.native="saveTabTitle" ref="edit_tab_title_info_title"></el-input></el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+          <el-button @click="is_show_edit_tab_title_dialog = false">取 消</el-button>
+          <el-button type="primary" @click="saveTabTitle" native-type="submit">确 定</el-button>
+        </div>
+      </el-dialog>
+    </div>
+  </template>
+</div>
+<script src="//cache.hinabian.com/admin/element-ui/vue.js"></script>
+<script src="//cache.hinabian.com/admin/element-ui/index.js"></script>
+<script src="//cache.hinabian.com/admin/http-vue-loader.js"></script>
+<script src="//cache.hinabian.com/admin/clipboard.min.js"></script>
+<script src="//cache.hinabian.com/admin/axios.min.js"></script>
+<script src="//cache.hinabian.com/admin/tinymce/tinymce.min.js"></script>
+<script src="//cache.hinabian.com/admin/Sortable.min.js"></script>
+<script>
+  var Main = {
+    components: {
+      'rich-text': httpVueLoader('../richText?action=vue_compnent')
+    },
+    data() {
+      return {
+        cur_edit_tab_title_id:'',
+        edit_tab_title_form_rules: {
+          title: [{ required: true, message: '名称是必须的', trigger: 'change' }]
+        },
+        edit_tab_title_info:{title:''},
+        is_show_edit_tab_title_dialog:false,
+        img_preview_src: '',
+        is_show_img_preview: false,
+        tab_title:'',
+        cur_tab_id: '',
+        picture:'',
+        picture_pc:'',
+        picture_pc_detail:'',
+        picture_list:[],
+        country: [],
+        state: [],
+        rules: {
+          country: [{ required: true, message: '国家是必须的', trigger: 'change' }],
+          state: [{ required: true, message: '状态是必须的', trigger: 'change' }],
+          title: [{ required: true, message: '名称是必须的', trigger: 'change' }],
+          summary: [{ required: true, message: '概要是必须的', trigger: 'change' }],
+          place: [{ required: true, message: '活动地点是必须的', trigger: 'change' }],
+          age_range: [{ required: true, message: '年龄要求是必须的', trigger: 'change' }],
+          lang_desc: [{ required: true, message: '语言要求是必须的', trigger: 'change' }],
+          rec_reason: [{ required: true, message: '推荐理由是必须的', trigger: 'change' }],
+          period: [{ required: true, message: '项目时间是必须的', trigger: 'change' }],
+          price: [{ required: true, message: '价格是必须的', trigger: 'blur' }],
+          ori_price: [{ required: true, message: '原价是必须的', trigger: 'blur' }],
+          picture: [{ required:true, message: '图片(M站)是必须的', validator: this.emptyValidator}],
+          picture_pc: [{ required:true, message: '图片(PC)是必须的', validator: this.emptyValidator}],
+          picture_pc_detail: [{ required:true, message: '图片(PC详情)是必须的', validator: this.emptyValidator}],
+          // picture_list: [{ required:true, message: '轮播图片是必须的', validator: this.emptyValidator}],
+          content: [{ required:true, message: '详情介绍(M站)是必须的', validator: this.emptyValidator}],
+          multi_content: [{ required:true, message: '详情介绍是必须的', validator: this.emptyValidator, trigger:'_'}]
+        },
+        editor_title: '',
+        is_show_editor:false,
+        limit:7,
+        default_query:{},
+        query:{},
+        total: 0,
+        list: [],
+        loading: false,
+        empty_list:'',
+        default_info:{
+          multi_content:[],
+          is_enabled:false,
+          is_selection:false
+        },
+        info: {},
+        posting:false
+      }
+    },
+    filters: {
+      //多余字符省略,用法: {{scope.row.summary | ellipsis(14)}}
+      ellipsis(value, length) {
+        if (!value) return ''
+        if (value.length > length) {
+          return value.slice(0, length) + '...'
+        }
+        return value
+      },
+    },
+    mounted() {
+      this.getList()
+      this.clipboard()
+    },
+    methods: {
+      editTabTitle(tab_id, title){
+        this.is_show_edit_tab_title_dialog = true
+        this.cur_edit_tab_title_id = tab_id
+        this.edit_tab_title_info.title = title
+        this.$nextTick(() => {
+          this.$refs['edit_tab_title_info_title'].focus()
+        })
+      },
+      saveTabTitle(){
+        this.$refs['edit_tab_title_form'].validate((valid) => {
+          if (valid) {
+            this.is_show_edit_tab_title_dialog = false
+            for(let i in this.info.multi_content){
+              if(this.info.multi_content[i].tab_id == this.cur_edit_tab_title_id){
+                this.info.multi_content[i].title = this.edit_tab_title_info.title
+                break
+              }
+            }
+          }
+        })
+      },
+      sortMultiContent(){
+        let vm = this
+        Sortable.create(document.querySelectorAll('.el-tabs__nav')[0], {
+          dataIdAttr: 'id',
+          onEnd:function (evt) {
+            for(let v of vm.$refs['multi_rich_text']){
+              v.triggerSaveContent()
+            }
+            let multi_content = vm.info.multi_content
+            let item = multi_content.splice(evt.oldIndex,1)[0]
+            multi_content.splice(evt.newIndex,0,item)
+            vm.info.multi_content = []
+            setTimeout(() => {
+              vm.info.multi_content = multi_content
+            })
+          }
+        })
+      },
+      validInput(el, invalid){
+        if(!el.value || invalid){
+          el.classList.add("input_error")
+          return false
+        }
+        el.classList.remove("input_error")
+        return true
+      },
+      addTab() {
+        let input = this.$refs.tab_title.$refs.input
+        if(!this.validInput(input)){
+          return false
+        }
+        let new_tab = {
+          title: input.value,
+          tab_id: 't' + Math.floor(Math.random()*(1000-0+1)+0),
+          info:{}
+        }
+        this.info.multi_content.push(new_tab)
+        this.cur_tab_id = new_tab.tab_id
+      },
+      removeTab(targetName) {
+        this.$confirm('确定删除？').then(_ => {
+          let tabs = this.info.multi_content
+          let activeName = this.cur_tab_id
+          if (activeName === targetName) {
+            tabs.forEach((tab, index) => {
+              if (tab.name === targetName) {
+                let nextTab = tabs[index + 1] || tabs[index - 1]
+                if (nextTab) {
+                  activeName = nextTab.tab_id
+                }
+              }
+            })
+          }
+          this.cur_tab_id = activeName
+          this.info.multi_content = tabs.filter(tab => tab.tab_id !== targetName)
+        }).catch(_ => {})
+      },
+      tinymceInit(initCallback){
+        tinymce.init({
+          selector: '#rich_text',
+          language: 'zh_CN',
+          //width: 600,
+          //height: 600,
+          mobile: {
+            theme: 'mobile',
+          },
+          //paste_webkit_styles: "color font-size",
+          paste_remove_styles_if_webkit: false,
+          plugins: [
+            'advlist autolink link image lists charmap print preview hr anchor pagebreak spellchecker',
+            'searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking',
+            'save table directionality emoticons template powerpaste axupimgs',
+            //'fullpage'
+          ],
+          powerpaste_word_import: 'propmt',// 参数可以是propmt, merge, clear，效果自行切换对比
+          powerpaste_html_import: 'propmt',// propmt, merge, clear
+          powerpaste_allow_local_images: true,
+          paste_data_images: true,
+          /*toolbar: 'insertfile undo redo | styleselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image | print preview media fullpage | forecolor backcolor emoticons hr'*/
+          toolbar: 'insertfile undo redo | bold fontsizeselect forecolor link emoticons image axupimgs| hr bullist numlist outdent indent | code preview fullscreen',
+          setup: function (editor) {
+            console.log('Editor was setup.');
+            editor.on('init', function (e) {
+              console.log('Editor was initialized.');
+              if(initCallback){
+                initCallback();
+              }
+            });
+          },
+          images_upload_handler: function (blobInfo, success, failure) {
+            var file = blobInfo.blob()
+            var xhr, formData;
+            xhr = new XMLHttpRequest();
+            xhr.withCredentials = false;
+            xhr.open('POST', '/file/image/saveWithOssLimit/size/50000');
+            xhr.onload = function() {
+              var json;
+              if (xhr.status != 200) {
+                failure('HTTP Error: ' + xhr.status);
+                return;
+              }
+              json = JSON.parse(xhr.responseText);
+              if (!json) {
+                failure('Invalid JSON: ' + xhr.responseText);
+                return;
+              }
+              if(json.errorCode != 0){
+                failure('错误: ' + json.data);
+              }
+
+              success(json.data);
+            };
+            formData = new FormData();
+            formData.append('file', file, file.name);
+            xhr.send(formData);
+          }
+        })
+      },
+      //移出一张图片
+      handlePictureListRemove(file, fileList) {
+        this.info.picture_list = fileList
+        this.picture_list = JSON.parse(JSON.stringify(fileList))
+      },
+      //图片预览
+      handlePictureListPreview(file) {
+        this.img_preview_src = file.url;
+        this.is_show_img_preview = true;
+      },
+      //上传图片后
+      handlePictureListSuccess(res, file) {
+        if(res.errorCode != 0) {
+          return this.$notify.error(res.data)
+        }
+        this.info.picture_list.push({name:file.name, url:res.data})
+        this.$refs['dataForm'].validateField('picture_list')
+      },
+      //上传图片后
+      handlePicturePCDetailSuccess(res, file) {
+        if(res.errorCode != 0){
+          return this.$notify.error(res.data)
+        }
+        this.picture_pc_detail = res.data
+        this.info.picture_pc_detail = res.data
+        this.$refs['dataForm'].validateField('picture_pc_detail')
+      },
+      //上传图片后
+      handlePicturePCSuccess(res, file) {
+        if(res.errorCode != 0){
+          return this.$notify.error(res.data)
+        }
+        this.picture_pc = res.data
+        this.info.picture_pc = res.data
+        this.$refs['dataForm'].validateField('picture_pc')
+      },
+      //上传图片后
+      handlePictureSuccess(res, file) {
+        if(res.errorCode != 0){
+          return this.$notify.error(res.data)
+        }
+        this.picture = res.data
+        this.info.picture = res.data
+        this.$refs['dataForm'].validateField('picture')
+      },
+      //上传图片前
+      beforePictureUpload(file) {
+        const isJPG = file.type === 'image/jpeg';
+        const isLt2M = file.size / 1024 / 1024 < 2;
+        if (!isJPG) {
+          //this.$notify.error('上传头像图片只能是 JPG 格式!');
+        }
+        if (!isLt2M) {
+          this.$notify.error('上传头像图片大小不能超过 2MB!');
+        }
+        //return isJPG && isLt2M;
+        return isLt2M;
+      },
+      //打开弹窗
+      editOpen(title, callback){
+        this.editor_title = title
+        this.is_show_editor=true
+        this.info = JSON.parse(JSON.stringify(this.default_info))
+        //打开弹窗渲染完成后的回调
+        this.$nextTick(() => {
+          this.sortMultiContent()
+          if(callback){
+            callback()
+          }
+        })
+      },
+      //表单重置
+      resetForm(formName){
+        this.$refs[formName].resetFields()
+        this.picture = ''
+        this.picture_pc = ''
+        this.picture_pc_detail = ''
+        this.picture_list = []
+        tinymce.get('rich_text').setContent('')
+      },
+      //空数据验证器(用于上传等非input控件)
+      emptyValidator(rule, value, callback){
+        if (!this.info[rule.field] || (typeof this.info[rule.field] == 'object'  && !this.info[rule.field].length)) {
+          callback(new Error())
+        } else {
+          callback()
+        }
+      },
+      handleCreate(){
+        this.editOpen('新建', this.tinymceInit)
+      },
+      //详情编辑
+      handleInfo(row, index) {
+        this.editOpen('编辑', () => {
+          this.axiosGet('update?action=info', {params : {uuid:row.uuid}} ).then(response => {
+            let data = response.data.data
+            console.warn('handleInfo response data', data)
+            let info = data.info
+            info.start_time = info.start_time_fmt
+            info.end_time = info.end_time_fmt
+            this.info = info
+            this.picture = info.picture
+            this.picture_pc = info.picture_pc
+            this.picture_pc_detail = info.picture_pc_detail
+            this.picture_list = JSON.parse(JSON.stringify(this.info.picture_list))
+            if(this.info.multi_content.length){
+              this.cur_tab_id = this.info.multi_content[0].tab_id
+            }
+            this.tinymceInit(() => {
+              tinymce.get('rich_text').setContent(info.content)
+            })
+            tinymce.get('rich_text').setContent(info.content)
+          })
+        })
+      },
+      //更新
+      handleUpdate(e, data) {
+        const update = (data) => {
+          this.axiosPost((data.uuid ? 'update' : 'create') + '?action', data).then( (response) => {
+            this.is_show_editor=false
+            this.getList()
+          })
+        }
+        if(data){
+          update(data)
+        }
+        else{
+          this.info.content = tinymce.get('rich_text').getContent()
+          this.$refs['dataForm'].validate((valid) => {
+            let component_valid = true
+            for(let i in this.$refs['multi_rich_text']){
+              this.$refs['multi_rich_text'][i].$refs['dataForm'].validate((valid) => {
+                if (!valid) {
+                  this.cur_tab_id = this.info.multi_content[i].tab_id
+                  component_valid = false
+                }
+              })
+            }
+            if (valid && component_valid) {
+              update(this.info)
+            }
+          })
+        }
+      },
+      //剪贴板
+      clipboard(){
+        (new ClipboardJS('.copy')).on('success', function(e) {
+          e.clearSelection()
+          let t = e.trigger
+          t.innerText = '已复制'
+          setTimeout(()=>{t.innerText = '复制'},1000)
+        })
+      },
+      //请求列表数据
+      getList() {
+        this.query=Object.assign({},this.default_query, this.query)
+        this.query.limit = this.limit
+        this.axiosGet('?action',{params:this.query} ).then(response => {
+          if(response.data.code != 'ok'){
+            this.empty_list = response.data.msg
+            this.total = 0
+          }
+          else{
+            let data = response.data.data
+            this.list = data.list
+            this.total = data.total
+            this.country = data.country
+            this.state = data.state
+          }
+        })
+      },
+      //提交每页显示数
+      handleSizeChange(limit){
+        this.limit = limit
+        this.getList()
+      },
+      //翻页
+      handleCurrentChange(page){
+        this.query.page = page
+        this.getList()
+      },
+      //提交列表筛选
+      handleFilter(){
+        for (let i in this.query){
+          if((''+this.query[i]).trim() == ''){
+            delete this.query[i]
+          }
+        }
+        this.query.page = 1
+        this.getList()
+      },
+      //重置筛选
+      resetFilter(){
+        this.query = this.default_query
+        this.handleFilter()
+      },
+      axiosRequest(config, handle_error = true) {
+        var vm = this
+        return new Promise((resolve, reject) => {
+          config.method == 'post' ? vm.posting=true : vm.loading=true
+          axios({timeout:20000,...config}).then(function(response){
+            if(response.request.responseURL == 'https://operate.hinabian.com/index/index'){
+              location.href = response.request.responseURL;
+              return;
+            }
+            if(response.data.code != 'ok' && handle_error){
+              vm.$notify.error(response.data.msg)
+              reject(response)
+            }
+            else{
+              config.method == 'post' ? vm.$notify.success('操作成功') : ''
+              resolve(response)
+            }
+          }).catch(function (error) {
+            if(error.response){
+              console.warn('服务端错误',error.response.data.ref)
+              data = error.response.data
+              if(handle_error){
+                if(data.msg){
+                  vm.$notify.error(data.msg)
+                } else{
+                  vm.$notify.error(error.response.statusText)
+                }
+              }
+            } else{
+              console.warn('axios catch error',error)
+              vm.$notify.error(error.message)
+            }
+            reject(error)
+          }).finally(function () {
+            config.method == 'post' ? vm.posting=false : vm.loading=false
+          })
+        })
+      },
+      axiosGet(url, config, handle_error = true){
+        return this.axiosRequest({
+          url:url,
+          method:'get',
+          ...config
+        })
+      },
+      axiosPost(url, data, config, handle_error = true){
+        return this.axiosRequest({
+          url:url,
+          method:'post',
+          data,
+          ...config
+        })
+      }
+    }
+  }
+
+  Vue.prototype.$ELEMENT = { size: "mini" } //小号UI,小号字体
+  var Ctor = Vue.extend(Main)
+  new Ctor().$mount('#app')
+
+</script>
+
+</body>
+</html>

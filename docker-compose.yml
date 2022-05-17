@@ -1,0 +1,26 @@
+version: '2.0'
+services:
+  php-fpm:
+    container_name: ${service_name}-app
+    build:
+      context: .
+      args:
+        timezone: $timezone
+        service_port: $service_port
+        service_port1: $service_port1
+        service_port2: $service_port2
+    ports:
+      - "$service_port:$service_port"
+      - "$service_port1:$service_port1"
+      - "$service_port2:$service_port2"
+    extra_hosts:
+      #     - "consul.client:$consul_host"#必须为ip地址
+      - "operate.hinabian.com:$operate_host"
+      - "user.hinabian.com:$user_center_host"
+      - "yxcrm.hinabian.com:$yxcrm_host"
+      - "bxcrm.hinabian.com:$bxcrm_host"
+    #    dns:
+    #      - 114.14.114.114
+    #      - 8.8.8.8
+    volumes:
+      - ./:/var/www/one-app

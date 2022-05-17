@@ -1,0 +1,144 @@
+.filter-item{
+  max-width: 160px;
+}
+
+/*列表编辑*/
+.tb-edit .el-input {
+  display: none
+}
+.tb-edit .current-row .el-input {
+  display: block
+}
+.tb-edit .current-row .el-input+span {
+  display: none
+}
+
+.selected-row{
+  background-color: #ecf5ff !important;
+}
+
+/*上传*/
+.avatar-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-uploader .el-upload:hover {
+  border-color: #409EFF;
+}
+.avatar-uploader-icon {
+    font-size: 14px;
+    color: #8c939d;
+    width: 38px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+}
+.avatar-uploader .el-upload--picture-card, .avatar-uploader .el-upload-list__item{
+  width: 70px; height: 70px; line-height: 1.2;
+}
+.avatar-uploader .el-upload--picture-card .avatar-uploader-icon {
+  font-size: 16px;
+  color: #8c939d;
+  line-height: 66px;
+  text-align: center;
+}
+.avatar-uploader .el-upload-list__item.is-success .el-upload-list__item-status-label{
+  display: none;
+}
+.avatar {
+  width: 52px;
+  height: 100%;
+  display: block;
+}
+/*图片*/
+.el-popover .el-image{
+  border: 1px dashed #409EFF;
+  border-radius: 4px;
+}
+.el-image img{
+  border-radius: 4px;
+}
+
+/*富文本编辑器*/
+/*工具栏层高问题*/
+.tox-silver-sink{
+  z-index: 3000 !important;
+}
+/*字号选择图标宽度*/
+.tox .tox-tbtn--bespoke .tox-tbtn__select-label{
+  width: 2em !important;
+}
+
+/*时间控件*/
+.el-date-table td {
+  padding: 0;
+}
+
+/*拖拽排序*/
+.sort_table tr.blue-background,.sort_list .blue-background {
+  background-color: rgb(121, 187, 255);
+}
+
+/*提示信息*/
+span.info{
+  display: inline-block;
+  font-weight: 400;
+  color: #9e9e9e;
+  font-size: 13px;
+  min-width: 35.5px;
+  height: 28px;
+  line-height: 28px;
+  vertical-align: top;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+/*通知样式*/
+.el-notification {
+  padding: 10px 20px 10px 8px;
+}
+.el-notification__group {
+  margin-left: 10px;
+  margin-right: 8px;
+}
+.el-notification__content {
+  margin-top: 2px;
+}
+.el-notification__closeBtn {
+  top: 14px;
+  right: 8px;
+}
+
+/*文本省略提示*/
+.el-tooltip__popper{
+  max-width: 50%;
+}
+
+/*弹窗最大化按钮*/
+.el-dialog__headerbtn .el-icon-full-screen {
+  color: #909399;
+}
+.el-dialog__headerbtn .el-icon-bottom-left {
+  color: #909399;
+}
+
+.no-lable-form .el-form-item__content{
+  margin-left:0 !important;
+}
+
+/*非表单校验*/
+.input_error{
+  border-color: #F56C6C;
+}
+
+fieldset{
+  border-width: 1px;
+  border-color: #DCDFE0;
+  border-radius: 8px;
+  margin-inline-start: 0;
+  border-style: dashed;
+  margin: 10px;
+}
